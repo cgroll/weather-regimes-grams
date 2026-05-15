@@ -1,89 +1,66 @@
-# Weather Regimes Grams
+# Weather Regimes — Grams
 
-A template for research projects that publish a [MyST](https://mystmd.org/) Jupyter Book
-to GitHub Pages. The data pipeline is managed by [Snakemake](https://snakemake.readthedocs.io/);
+Analysis and replication of [Christian Grams'](https://www.imk-tro.kit.edu/english/staff_grams.php)
+weather regime classification for Europe/Atlantic.
+The dataset is published on Zenodo:
+[record 17080146](https://zenodo.org/records/17080146).
+
+The data pipeline is managed by [Snakemake](https://snakemake.readthedocs.io/);
 dependencies are managed by [uv](https://docs.astral.sh/uv/).
+Results are published as a [MyST](https://mystmd.org/) Jupyter Book on GitHub Pages.
 
-## Starting a new project from this template
-
-### Pick your names up front
-
-You need two names:
-
-| What | Example | Rule |
-|------|---------|------|
-| **Repository / folder name** | `financial-market-returns` | Chosen on GitHub when you create the repo — becomes the local folder name after cloning |
-| **Python package abbreviation** | `fmr` | Short acronym you pick yourself; used in every `import` statement |
-
-The abbreviation is the equivalent of `woe` in `world-of-energy`. It must be a
-valid Python identifier (letters, digits, underscores) — shorter is better.
-
-### 1. Create the repository on GitHub
-
-Click **Use this template → Create a new repository** at the top of this page.
-Name it (e.g. `financial-market-returns`) and click **Create repository**.
-
-### 2. Clone and initialize
+## Quick start
 
 ```bash
-git clone https://github.com/your-username/financial-market-returns.git
-cd financial-market-returns
-python init_project.py
-```
-
-The script reads the project name from the git remote automatically and asks
-only for the package abbreviation. It renames `pkg/`, updates all references
-in `pyproject.toml`, `Snakefile`, and the pipeline scripts, commits the
-result, and removes itself.
-
-### 3. Set up the environment
-
-```bash
-# Install uv if you haven't already — https://docs.astral.sh/uv/
+# Install uv if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 uv sync
-```
 
-### 4. Verify the example pipeline
-
-```bash
 make dry-run   # preview what would run
-make run       # execute the example pipeline
+make run       # download data and execute the pipeline
 make serve     # open http://localhost:3000 — live book preview
 ```
 
-Once everything works, remove the example files and start your own pipeline:
+## Data
 
-```bash
-rm pipeline/01_download_example.py pipeline/02_analyse_example.py
-# Remove the example rule from Snakefile and the notebook entry from book/myst.yml
+The raw dataset is downloaded automatically on the first `make run`.
+It is fetched from:
+
+```
+https://zenodo.org/api/records/17080146/files-archive
 ```
 
-### 5. Enable GitHub Pages
+The archive is saved to `data/raw/grams_weather_regimes.zip` and extracted
+in-place. Both the zip and extracted files are git-ignored; re-running
+`snakemake` will not re-download unless the zip is deleted.
 
-In your repository: **Settings → Pages → Source → GitHub Actions**.
+To force a fresh download:
 
-Every push to `main` will build and deploy the book automatically.
-Pull requests run only the build check.
+```bash
+rm data/raw/grams_weather_regimes.zip
+make run
+```
 
 ## Project layout
 
 ```
 project-root/
-├── <abbrev>/            # Python package — renamed by init_project.py
+├── wr/                  # Python package — shared utilities
 │   └── paths.py         # Centralized path config
 ├── pipeline/            # Pipeline scripts
-│   ├── 01_download_*    # Data acquisition
+│   ├── 01_download_*    # Data acquisition (no charts)
 │   └── 02_analyse_*     # Analysis → notebook
 ├── book/                # MyST book source
 │   ├── notebooks/       # Executed notebooks (Snakemake output)
 │   ├── markdown/        # Static content
 │   └── myst.yml         # TOC and site settings
-├── data/                # Git-ignored data
+├── data/
+│   ├── raw/             # Downloaded Zenodo archive + extracted files
+│   └── processed/       # Derived datasets (both git-ignored)
 ├── output/images/       # Figures (tracked in git)
 ├── Snakefile            # Pipeline DAG
-└── contribution_conventions.md   # Detailed conventions for contributors/AI
+└── contribution_conventions.md   # Conventions for contributors/AI
 ```
 
 See [contribution_conventions.md](contribution_conventions.md) for full details on
@@ -98,3 +75,9 @@ adding pipeline stages, writing analysis scripts, and Snakemake usage.
 | `snakemake -R <rule>` | Force-re-run a specific rule |
 | `snakemake <file>` | Build one specific output file |
 | `snakemake --forceall` | Re-run everything unconditionally |
+
+## GitHub Pages
+
+In your repository: **Settings → Pages → Source → GitHub Actions**.
+Every push to `main` builds and deploys the book automatically.
+Pull requests run only the build check.

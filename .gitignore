@@ -20,6 +20,9 @@ data/processed/*
 !data/downloads/.gitkeep
 !data/processed/.gitkeep
 
+# Snakemake metadata
+.snakemake/
+
 # Secrets
 .env
 

@@ -7,7 +7,7 @@ It is written for human contributors and AI agents alike.
 
 ```
 project-root/
-├── pkg/                     # Python package — shared utilities
+├── wr/                      # Python package — shared utilities
 │   ├── __init__.py
 │   └── paths.py             # Centralized path configuration
 ├── pipeline/                # Data pipeline scripts
@@ -18,12 +18,12 @@ project-root/
 │   ├── markdown/            # Static hand-written content
 │   └── myst.yml             # Book configuration and table of contents
 ├── data/
-│   ├── downloads/           # Raw downloaded data (git-ignored)
+│   ├── raw/                 # Downloaded Zenodo archive + extracted files (git-ignored)
 │   └── processed/           # Processed/transformed data (git-ignored)
 ├── output/
 │   ├── images/              # Chart images saved by pipeline scripts
 │   └── reports/             # Report files
-├── Snakefile                # Pipeline definition (equivalent of dvc.yaml)
+├── Snakefile                # Pipeline definition
 └── pyproject.toml           # Dependencies managed by uv
 ```
 
@@ -61,18 +61,30 @@ Snakemake compares **file modification timestamps**: if all outputs are newer
 than all inputs, the rule is skipped. This is the key difference from DVC —
 there is no explicit lock file; timestamps drive incremental builds.
 
-### `ancient()` for downloaded data
+### Preventing re-downloads
 
-Downloaded files should not be re-fetched every run. Wrap their paths in
-`ancient()` so Snakemake treats them as infinitely old and never triggers
-re-download as long as the file exists:
+Download rules declare their output file without any special wrapper. Because
+the rule has no inputs, Snakemake only runs it when the output file is absent —
+so existing downloads are never re-fetched automatically:
 
 ```python
 rule download_data:
     output:
-        ancient("data/downloads/raw.parquet"),
+        "data/raw/my_dataset.zip",
     shell:
         "uv run python pipeline/01_download.py"
+```
+
+If a downstream analysis rule should not be re-triggered when the raw file is
+touched (e.g. after a manual inspection), wrap the path in `ancient()` on the
+**input** side of that rule:
+
+```python
+rule analyse_data:
+    input:
+        data = ancient("data/raw/my_dataset.zip"),
+        script = "pipeline/02_analyse.py",
+    ...
 ```
 
 To force a fresh download: delete the file and re-run `snakemake`.
@@ -190,14 +202,14 @@ a no-op in headless mode.
 ## Path Conventions
 
 All scripts must be runnable from any working directory. Use `ProjPaths`
-from `pkg/paths.py`:
+from `wr/paths.py`:
 
 ```python
-from pkg.paths import ProjPaths
+from wr.paths import ProjPaths
 
 paths = ProjPaths()
 
-df = pd.read_parquet(paths.example_raw_file)
+df = pd.read_parquet(paths.raw_path / "some_file.nc")
 fig.savefig(paths.images_path / "03_chart.png")
 ```
 
@@ -206,7 +218,7 @@ Key paths:
 | Property | Directory |
 |----------|-----------|
 | `paths.data_path` | `data/` |
-| `paths.downloads_path` | `data/downloads/` |
+| `paths.raw_path` | `data/raw/` |
 | `paths.processed_data_path` | `data/processed/` |
 | `paths.images_path` | `output/images/` |
 | `paths.pipeline_path` | `pipeline/` |
@@ -214,7 +226,7 @@ Key paths:
 ## Adding a New Pipeline Stage
 
 1. **Write the script** in `pipeline/`.
-2. **Add a property** to `pkg/paths.py` for every new data file:
+2. **Add a property** to `wr/paths.py` for every new data file:
    ```python
    @property
    def my_new_file(self) -> Path:

@@ -14,7 +14,8 @@ project:
     - file: markdown/index.md
     - title: Analysis
       children:
-        - file: notebooks/02_analyse_example.ipynb
+        - file: notebooks/04_wr_timeseries.ipynb
+        - file: notebooks/05_compute_projection.ipynb
 site:
   options:
     folders: true

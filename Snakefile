@@ -1,28 +1,32 @@
-# Snakefile — project pipeline
+# Snakefile — weather-regimes-grams pipeline
 #
-# Concepts used here:
+#   ancient(path)   — treat the file as infinitely old if it exists; skips
+#                     the rule without re-downloading. Delete the file to
+#                     force a fresh fetch.
 #
-#   ancient(path)   — if the file already exists, treat it as infinitely old so
-#                     this rule is skipped. Ideal for downloaded data that
-#                     should not be re-fetched every run.
-#
-#   rule all        — pseudo-rule whose `input` lists the final targets.
-#                     `snakemake` (no arguments) builds everything in this list.
+#   rule all        — pseudo-rule listing the final targets that bare
+#                     `snakemake` will build.
 #
 # Common commands:
-#   snakemake -n              dry-run: show what would be executed
-#   snakemake -j4             run with 4 parallel jobs
-#   snakemake <target>        build one specific output file
-#   snakemake --forcerun <rule>   force a rule to re-run even if outputs exist
+#   snakemake -n                  dry-run
+#   snakemake -j4                 run with 4 parallel jobs
+#   snakemake <target>            build one specific output file
+#   snakemake --forcerun <rule>   force a rule to re-run
 
 # ---------------------------------------------------------------------------
 # Project-wide settings
 # ---------------------------------------------------------------------------
 
-# List every notebook that the book should contain.
-# Extend this list when you add a new analysis script.
 ANALYSIS_NOTEBOOKS = [
-    "book/notebooks/02_analyse_example.ipynb",
+    "book/notebooks/04_wr_timeseries.ipynb",
+    "book/notebooks/05_compute_projection.ipynb",
+]
+
+PROCESSED_DATA = [
+    "data/processed/wri_projections.csv",
+    "data/processed/lc_attribution.csv",
+    "data/processed/lc_info.csv",
+    "data/processed/lc_no_regime.csv",
 ]
 
 # ---------------------------------------------------------------------------
@@ -31,39 +35,83 @@ ANALYSIS_NOTEBOOKS = [
 
 rule all:
     input:
-        ANALYSIS_NOTEBOOKS
+        PROCESSED_DATA + ANALYSIS_NOTEBOOKS
 
 # ---------------------------------------------------------------------------
 # Download rules
 # ---------------------------------------------------------------------------
-# Use ancient() on outputs so that existing downloaded files are never
-# re-fetched.  Delete the file manually to force a fresh download.
 
-rule download_example:
+rule download_era5_z500:
     output:
-        ancient("data/downloads/example_data.parquet"),
+        "data/downloads/era5/z0500_20241101_20250331.nc",
     shell:
-        "uv run python pipeline/01_download_example.py"
+        "uv run python pipeline/01_download_era5_z500.py"
+
+rule download_grams:
+    output:
+        "data/downloads/wr_data_package_V1.0/wr_data/Clusters_WRs.nc",
+    shell:
+        "uv run python pipeline/01_download_grams.py"
+
+# ---------------------------------------------------------------------------
+# Reference material
+# ---------------------------------------------------------------------------
+
+rule convert_example_notebook:
+    input:
+        "data/downloads/wr_data_package_V1.0/scripts_first_steps/WR_read_example.ipynb",
+    output:
+        "data/downloads/wr_data_package_V1.0/scripts_first_steps/WR_read_example.py",
+    shell:
+        """
+        uv run jupyter nbconvert --to script {input} \
+            --output WR_read_example \
+            --output-dir data/downloads/wr_data_package_V1.0/scripts_first_steps/
+        """
+
+# ---------------------------------------------------------------------------
+# Processing rules
+# ---------------------------------------------------------------------------
+
+rule process_wr_data:
+    input:
+        wri = "data/downloads/wr_data_package_V1.0/wr_data/WRI_projections.txt",
+        lc  = "data/downloads/wr_data_package_V1.0/wr_data/WR_LCattribution.txt",
+        script = "pipeline/02_process_wr_data.py",
+    output:
+        wri_csv = "data/processed/wri_projections.csv",
+        lc_csv  = "data/processed/lc_attribution.csv",
+    shell:
+        "uv run python pipeline/02_process_wr_data.py"
+
+rule process_lc_info:
+    input:
+        lc_files = expand(
+            "data/downloads/wr_data_package_V1.0/wr_data/WR_lifecycle_information_{regime}.txt",
+            regime=["AT", "ZO", "ScTr", "AR", "EuBL", "ScBL", "GL", "no"],
+        ),
+        script = "pipeline/03_process_lc_info.py",
+    output:
+        lc_info    = "data/processed/lc_info.csv",
+        lc_no      = "data/processed/lc_no_regime.csv",
+    shell:
+        "uv run python pipeline/03_process_lc_info.py"
 
 # ---------------------------------------------------------------------------
 # Analysis / notebook rules
 # ---------------------------------------------------------------------------
-# Pattern for every analysis script:
-#   1. jupytext executes the .py script and writes an .ipynb with outputs
-#   2. A Python one-liner strips the raw jupytext metadata cell that MyST
-#      does not understand
-#
-# Add one rule per analysis script and list all image outputs explicitly so
-# Snakemake can track them as dependencies of downstream rules.
 
-rule process_example:
+rule compute_projection:
     input:
-        script  = "pipeline/02_analyse_example.py",
-        data    = "data/downloads/example_data.parquet",
+        script   = "pipeline/05_compute_projection.py",
+        z500     = "data/downloads/wr_data_package_V1.0/example_data/Z0500_20250601_00.nc",
+        eofs     = "data/downloads/wr_data_package_V1.0/wr_data/EOFs_WRs.nc",
+        patterns = "data/downloads/wr_data_package_V1.0/wr_data/Normed_Z0500-patterns_EOFdomain.nc",
+        wri_csv  = "data/processed/wri_projections.csv",
+        lc_csv   = "data/processed/lc_attribution.csv",
+        lc_info  = "data/processed/lc_info.csv",
     output:
-        notebook = "book/notebooks/02_analyse_example.ipynb",
-        img1     = "output/images/02_daily_average.png",
-        img2     = "output/images/02_category_dist.png",
+        notebook = "book/notebooks/05_compute_projection.ipynb",
     shell:
         """
         MPLBACKEND=Agg uv run jupytext --to notebook --execute \
@@ -78,9 +126,28 @@ nbformat.write(nb, '{output.notebook}')
 "
         """
 
-# ---------------------------------------------------------------------------
-# Utility rules
-# ---------------------------------------------------------------------------
-
-# Re-run a single stage by name:  snakemake -R download_example
-# Force all:                       snakemake --forceall
+rule wr_timeseries:
+    input:
+        script   = "pipeline/04_wr_timeseries.py",
+        wri_csv  = "data/processed/wri_projections.csv",
+        lc_csv   = "data/processed/lc_info.csv",
+        attr_csv = "data/processed/lc_attribution.csv",
+    output:
+        notebook   = "book/notebooks/04_wr_timeseries.ipynb",
+        img_tseries = "output/images/04_wr_timeseries.png",
+        img_freq    = "output/images/04_wr_freq_overall.png",
+        img_annual  = "output/images/04_wr_freq_annual.png",
+        img_cal     = "output/images/04_wr_calendar.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nbformat.write(nb, '{output.notebook}')
+"
+        """
