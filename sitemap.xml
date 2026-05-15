@@ -4,4 +4,10 @@
   <url>
     <loc>http://localhost:3000</loc>
   </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/wr-timeseries</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/compute-projection</loc>
+  </url>
 </urlset>
