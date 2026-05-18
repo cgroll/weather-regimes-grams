@@ -231,6 +231,83 @@ n_match_lc = (derived_lc == ref_lc).sum()
 print(f"lifecycle_wr_index exact match: {n_match_lc:,} / {n_total:,}  ({100*n_match_lc/n_total:.6f} %)")
 
 # %% [markdown]
+# ### `lifecycle_wr_index` — reproduced from IWR time series alone (no lifecycle files)
+#
+# Empirically inferred rules (see README — Lifecycle attribution algorithm):
+#
+# - **IWR threshold**: a regime is active when IWR ≥ 1.0.
+# - **Bridge gaps ≤ 40 timesteps (5 days)**: a dip below 1.0 shorter than 5 days
+#   does not terminate the lifecycle.
+# - **Minimum duration ≥ 40 timesteps (5 days)**: episodes shorter than 5 days
+#   are discarded.
+# - **Dominant regime**: when lifecycles overlap, highest IWR wins.
+#
+# Match rates vs pre-computed Grams dataset:
+#   - lifecycle level (onset/decay pair exact): 98.2 % (2097 / 2136)
+#   - timestep attribution level:               96.6 % (213 294 / 220 728)
+# The gap: algorithm over-detects (2655 vs 2136 lifecycles), creating spurious
+# active-regime periods.  See README TODO for investigation path.
+
+# %%
+GAP_THR = 40   # timesteps; dips ≤ this are bridged within a lifecycle
+MIN_LEN = 40   # timesteps; minimum lifecycle duration
+
+
+def _detect_lifecycles(iwr_series: pd.Series, gap_thr: int, min_len: int):
+    """Return list of (onset, decay) Timestamps for one regime's IWR series."""
+    vals  = (iwr_series >= 1.0).values.astype(np.int8)
+    times = iwr_series.index
+    n     = len(vals)
+
+    # Fill gaps of length <= gap_thr that are bounded on both sides by 1s
+    bridged = vals.copy()
+    i = 0
+    while i < n:
+        if bridged[i] == 0:
+            j = i
+            while j < n and bridged[j] == 0:
+                j += 1
+            if (j - i) <= gap_thr and i > 0 and j < n:
+                bridged[i:j] = 1
+            i = j
+        else:
+            i += 1
+
+    # Collect contiguous segments of 1s with length >= min_len
+    segs = []
+    i = 0
+    while i < n:
+        if bridged[i] == 1:
+            j = i
+            while j < n and bridged[j] == 1:
+                j += 1
+            if (j - i) >= min_len:
+                segs.append((times[i], times[j - 1]))
+            i = j
+        else:
+            i += 1
+    return segs
+
+
+detected_lc = {reg: _detect_lifecycles(wri[reg], GAP_THR, MIN_LEN) for reg in WR_NAMES}
+
+derived_lc2  = pd.Series(0, index=wri.index, dtype=int)
+winning_iwr2 = pd.Series(-np.inf, index=wri.index)
+
+for regime in WR_NAMES:
+    idx = BY_NAME[regime]["index"]
+    for onset, decay in detected_lc[regime]:
+        mask      = (wri.index >= onset) & (wri.index <= decay)
+        overwrite = mask & (wri[regime] > winning_iwr2)
+        derived_lc2[overwrite]  = idx
+        winning_iwr2[overwrite] = wri.loc[overwrite, regime]
+
+n_match_detected = (derived_lc2 == ref_lc).sum()
+n_lc_detected    = sum(len(v) for v in detected_lc.values())
+print(f"Lifecycles detected from IWR: {n_lc_detected}  (pre-computed: {len(lc_info[lc_info['regime'].isin(WR_NAMES)])})")
+print(f"lifecycle_wr_index match (from IWR): {n_match_detected:,} / {n_total:,}  ({100*n_match_detected/n_total:.4f} %)")
+
+# %% [markdown]
 # ## What is needed for a full ERA5-based pipeline
 #
 # The example above uses a single pre-processed Z500 field.  To compute IWR

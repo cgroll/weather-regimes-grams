@@ -16,6 +16,9 @@ project:
       children:
         - file: notebooks/04_wr_timeseries.ipynb
         - file: notebooks/05_compute_projection.ipynb
+        - file: notebooks/06_era5_wr_projection.ipynb
+        - file: notebooks/07_wr_analogs.ipynb
+        - file: notebooks/08_lifecycle_inspection.ipynb
 site:
   options:
     folders: true

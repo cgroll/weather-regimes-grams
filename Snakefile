@@ -20,6 +20,9 @@
 ANALYSIS_NOTEBOOKS = [
     "book/notebooks/04_wr_timeseries.ipynb",
     "book/notebooks/05_compute_projection.ipynb",
+    "book/notebooks/06_era5_wr_projection.ipynb",
+    "book/notebooks/07_wr_analogs.ipynb",
+    "book/notebooks/08_lifecycle_inspection.ipynb",
 ]
 
 PROCESSED_DATA = [
@@ -101,6 +104,31 @@ rule process_lc_info:
 # Analysis / notebook rules
 # ---------------------------------------------------------------------------
 
+rule era5_wr_projection:
+    input:
+        script   = "pipeline/06_era5_wr_projection.py",
+        z500     = "data/downloads/era5/z0500_20241101_20250331.nc",
+        clim     = "data/downloads/wr_data_package_V1.0/example_data/CLIM_Z@500_year_1979-2019.nc",
+        eofs     = "data/downloads/wr_data_package_V1.0/wr_data/EOFs_WRs.nc",
+        patterns = "data/downloads/wr_data_package_V1.0/wr_data/Normed_Z0500-patterns_EOFdomain.nc",
+        wri_csv  = "data/processed/wri_projections.csv",
+    output:
+        notebook = "book/notebooks/06_era5_wr_projection.ipynb",
+        img      = "output/images/06_era5_iwr_comparison.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
 rule compute_projection:
     input:
         script   = "pipeline/05_compute_projection.py",
@@ -112,6 +140,61 @@ rule compute_projection:
         lc_info  = "data/processed/lc_info.csv",
     output:
         notebook = "book/notebooks/05_compute_projection.ipynb",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule lifecycle_inspection:
+    input:
+        script  = "pipeline/08_lifecycle_inspection.py",
+        lc_info = "data/processed/lc_info.csv",
+        lc_no   = "data/processed/lc_no_regime.csv",
+        lc_csv  = "data/processed/lc_attribution.csv",
+    output:
+        notebook   = "book/notebooks/08_lifecycle_inspection.ipynb",
+        img_dur       = "output/images/08_lc_duration_jitter.png",
+        img_trans     = "output/images/08_transition_matrix.png",
+        img_trans_all = "output/images/08_transition_matrix_all.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule wr_analogs:
+    input:
+        script   = "pipeline/07_wr_analogs.py",
+        wri_csv  = "data/processed/wri_projections.csv",
+        lc_info  = "data/processed/lc_info.csv",
+        lc_csv   = "data/processed/lc_attribution.csv",
+    output:
+        notebook = "book/notebooks/07_wr_analogs.ipynb",
+        img_jitter   = "output/images/07_analog_jitter.png",
+        img_diverg   = "output/images/07_analog_divergence.png",
+        img_dist_all = "output/images/07_pairwise_dist.png",
+        img_dist_reg = "output/images/07_pairwise_dist_regimes.png",
+        img_heatmap      = "output/images/07_analog_regime_heatmap.png",
+        img_fracs        = "output/images/07_analog_regime_fracs.png",
+        img_heatmap_back = "output/images/07_analog_regime_heatmap_back.png",
+        img_fracs_back   = "output/images/07_analog_regime_fracs_back.png",
     shell:
         """
         MPLBACKEND=Agg uv run jupytext --to notebook --execute \

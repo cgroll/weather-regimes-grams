@@ -130,6 +130,11 @@ class ProjPaths:
         """Example 10-day LP-filtered Z500 anomaly field (2025-06-01 00 UTC)."""
         return self.grams_example_data_path / "Z0500_20250601_00.nc"
 
+    @property
+    def grams_clim_z500(self) -> Path:
+        """Year-round 1979-2019 climatological mean of Z500 (geopotential, m²/s²)."""
+        return self.grams_example_data_path / "CLIM_Z@500_year_1979-2019.nc"
+
     # ------------------------------------------------------------------ #
     # ERA5 data                                                            #
     # ------------------------------------------------------------------ #
