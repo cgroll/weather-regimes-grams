@@ -10,4 +10,13 @@
   <url>
     <loc>http://localhost:3000/notebooks/compute-projection</loc>
   </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/era5-wr-projection</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/wr-analogs</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/lifecycle-inspection</loc>
+  </url>
 </urlset>
