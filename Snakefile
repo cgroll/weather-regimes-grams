@@ -38,13 +38,20 @@ PROCESSED_DATA = [
     "data/processed/lc_no_regime.csv",
 ]
 
+ERA5_YEARS = [2019, 2020, 2021]        # expand to list(range(1960, 2022)) for the full dataset
+
+DOWNLOADS = [
+    "data/downloads/wb/z500_climatology.zarr",
+    "data/downloads/era5/z500_euro_atlantic.zarr",
+]
+
 # ---------------------------------------------------------------------------
 # Default target
 # ---------------------------------------------------------------------------
 
 rule all:
     input:
-        PROCESSED_DATA + ANALYSIS_NOTEBOOKS
+        PROCESSED_DATA + ANALYSIS_NOTEBOOKS + DOWNLOADS
 
 # ---------------------------------------------------------------------------
 # Download rules
@@ -68,11 +75,21 @@ rule download_wb_z500_climatology:
     shell:
         "uv run python pipeline/15_download_wb_z500_climatology.py"
 
-rule download_era5_z500_daily:
+rule download_era5_z500_year:
     output:
-        directory("data/downloads/era5/z500_euro_atlantic_2024_2025.zarr"),
+        directory("data/downloads/era5/z500_years/{year}.zarr"),
+    wildcard_constraints:
+        year = r"\d{4}",
     shell:
-        "uv run python pipeline/16_download_era5_z500_daily.py"
+        "uv run python pipeline/16_download_era5_z500_daily.py {wildcards.year}"
+
+rule concat_era5_z500:
+    input:
+        expand("data/downloads/era5/z500_years/{year}.zarr", year=ERA5_YEARS),
+    output:
+        directory("data/downloads/era5/z500_euro_atlantic.zarr"),
+    shell:
+        "uv run python pipeline/17_concat_era5_z500.py"
 
 # ---------------------------------------------------------------------------
 # Reference material

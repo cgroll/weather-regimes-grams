@@ -159,9 +159,18 @@ class ProjPaths:
         return self.downloads_path / "era5"
 
     @property
+    def era5_z500_years_path(self) -> Path:
+        """Directory containing one zarr per downloaded year."""
+        return self.era5_path / "z500_years"
+
+    def era5_z500_year_zarr(self, year: int) -> Path:
+        """Per-year zarr: daily 12 UTC Z500, 1.5° Euro-Atlantic."""
+        return self.era5_z500_years_path / f"{year}.zarr"
+
+    @property
     def era5_z500_daily_zarr(self) -> Path:
-        """Daily 12 UTC Z500 for 2024-2025, 1.5° Euro-Atlantic, from ARCO ERA5."""
-        return self.era5_path / "z500_euro_atlantic_2024_2025.zarr"
+        """Combined zarr of all years: daily 12 UTC Z500, 1.5° Euro-Atlantic."""
+        return self.era5_path / "z500_euro_atlantic.zarr"
 
     def era5_z500_nc(self, start: str, end: str) -> Path:
         """NetCDF file for ERA5 Z0500 covering a given analysis period.
