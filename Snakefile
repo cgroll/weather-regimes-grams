@@ -45,13 +45,18 @@ DOWNLOADS = [
     "data/downloads/era5/z500_euro_atlantic.zarr",
 ]
 
+GENERATED_IMAGES = [
+    "output/images/18_z500_climatology.gif",
+] + expand("output/images/19_z500_{year}.gif", year=ERA5_YEARS) \
+  + expand("output/images/19_z500_anomaly_{year}.gif", year=ERA5_YEARS)
+
 # ---------------------------------------------------------------------------
 # Default target
 # ---------------------------------------------------------------------------
 
 rule all:
     input:
-        PROCESSED_DATA + ANALYSIS_NOTEBOOKS + DOWNLOADS
+        PROCESSED_DATA + ANALYSIS_NOTEBOOKS + DOWNLOADS + GENERATED_IMAGES
 
 # ---------------------------------------------------------------------------
 # Download rules
@@ -90,6 +95,32 @@ rule concat_era5_z500:
         directory("data/downloads/era5/z500_euro_atlantic.zarr"),
     shell:
         "uv run python pipeline/17_concat_era5_z500.py"
+
+# ---------------------------------------------------------------------------
+# Image generation rules
+# ---------------------------------------------------------------------------
+
+rule z500_climatology_gif:
+    input:
+        script = "pipeline/18_z500_climatology_gif.py",
+        clim   = "data/downloads/wb/z500_climatology.zarr",
+    output:
+        "output/images/18_z500_climatology.gif",
+    shell:
+        "uv run python pipeline/18_z500_climatology_gif.py"
+
+rule z500_anomaly_gif:
+    input:
+        script = "pipeline/19_z500_anomaly_gif.py",
+        era5   = "data/downloads/era5/z500_years/{year}.zarr",
+        clim   = "data/downloads/wb/z500_climatology.zarr",
+    output:
+        raw  = "output/images/19_z500_{year}.gif",
+        anom = "output/images/19_z500_anomaly_{year}.gif",
+    wildcard_constraints:
+        year = r"\d{4}",
+    shell:
+        "uv run python pipeline/19_z500_anomaly_gif.py {wildcards.year}"
 
 # ---------------------------------------------------------------------------
 # Reference material
