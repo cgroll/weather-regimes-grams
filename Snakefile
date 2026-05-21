@@ -23,6 +23,12 @@ ANALYSIS_NOTEBOOKS = [
     "book/notebooks/06_era5_wr_projection.ipynb",
     "book/notebooks/07_wr_analogs.ipynb",
     "book/notebooks/08_lifecycle_inspection.ipynb",
+    "book/notebooks/09_pecd_overview.ipynb",
+    "book/notebooks/10_wr_pecd_germany.ipynb",
+    "book/notebooks/11_wr_pecd_maps.ipynb",
+    "book/notebooks/12_low_cf_events.ipynb",
+    "book/notebooks/13_low_wind_regimes.ipynb",
+    "book/notebooks/14_pecd_de_climatology.ipynb",
 ]
 
 PROCESSED_DATA = [
@@ -55,6 +61,18 @@ rule download_grams:
         "data/downloads/wr_data_package_V1.0/wr_data/Clusters_WRs.nc",
     shell:
         "uv run python pipeline/01_download_grams.py"
+
+rule download_wb_z500_climatology:
+    output:
+        directory("data/downloads/wb/z500_climatology.zarr"),
+    shell:
+        "uv run python pipeline/15_download_wb_z500_climatology.py"
+
+rule download_era5_z500_daily:
+    output:
+        directory("data/downloads/era5/z500_euro_atlantic_2024_2025.zarr"),
+    shell:
+        "uv run python pipeline/16_download_era5_z500_daily.py"
 
 # ---------------------------------------------------------------------------
 # Reference material
@@ -125,6 +143,7 @@ import nbformat
 nb = nbformat.read('{output.notebook}', as_version=4)
 nb.cells = [c for c in nb.cells
             if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
 nbformat.write(nb, '{output.notebook}')
 "
         """
@@ -150,6 +169,7 @@ import nbformat
 nb = nbformat.read('{output.notebook}', as_version=4)
 nb.cells = [c for c in nb.cells
             if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
 nbformat.write(nb, '{output.notebook}')
 "
         """
@@ -175,6 +195,7 @@ import nbformat
 nb = nbformat.read('{output.notebook}', as_version=4)
 nb.cells = [c for c in nb.cells
             if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
 nbformat.write(nb, '{output.notebook}')
 "
         """
@@ -205,6 +226,161 @@ import nbformat
 nb = nbformat.read('{output.notebook}', as_version=4)
 nb.cells = [c for c in nb.cells
             if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+
+rule pecd_de_climatology:
+    input:
+        script = "pipeline/14_pecd_de_climatology.py",
+        pecd   = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+    output:
+        notebook = "book/notebooks/14_pecd_de_climatology.ipynb",
+        img      = "output/images/14_pecd_de_climatology.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule low_wind_regimes:
+    input:
+        script  = "pipeline/13_low_wind_regimes.py",
+        pecd    = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+        lc_csv  = "data/processed/lc_attribution.csv",
+    output:
+        notebook  = "book/notebooks/13_low_wind_regimes.ipynb",
+        img_simul      = "output/images/13_low_wind_regime_stacks.png",
+        img_wind_lags  = expand("output/images/13_low_wind_lag_{lag}d.png",
+                                lag=["05", "10", "15", "20", "25"]),
+        img_solar_simul = "output/images/13_solar_regime_stacks.png",
+        img_solar_lags  = expand("output/images/13_solar_lag_{lag}d.png",
+                                 lag=["05", "10", "15", "20", "25"]),
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule low_cf_events:
+    input:
+        script   = "pipeline/12_low_cf_events.py",
+        pecd     = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+        wri_csv  = "data/processed/wri_projections.csv",
+        lc_csv   = "data/processed/lc_attribution.csv",
+    output:
+        notebook       = "book/notebooks/12_low_cf_events.ipynb",
+        img_solar      = "output/images/12_low_cf_worst_solar.png",
+        img_wind_on    = "output/images/12_low_cf_worst_wind_on.png",
+        img_wind_off   = "output/images/12_low_cf_worst_wind_off.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule wr_pecd_maps:
+    input:
+        script  = "pipeline/11_wr_pecd_maps.py",
+        pecd    = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+        lc_csv  = "data/processed/lc_attribution.csv",
+    output:
+        notebook = "book/notebooks/11_wr_pecd_maps.ipynb",
+        imgs     = expand(
+            "output/images/11_wr_maps_{regime}.png",
+            regime=["no", "AT", "ZO", "ScTr", "AR", "EuBL", "ScBL", "GL"],
+        ),
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule wr_pecd_germany:
+    input:
+        script   = "pipeline/10_wr_pecd_germany.py",
+        pecd     = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+        wri_csv  = "data/processed/wri_projections.csv",
+        lc_csv   = "data/processed/lc_attribution.csv",
+    output:
+        notebook  = "book/notebooks/10_wr_pecd_germany.ipynb",
+        img_scat    = "output/images/10_wr_de_scatter.png",
+        img_box     = "output/images/10_wr_de_boxplot.png",
+        img_corr    = "output/images/10_wr_de_corr.png",
+        img_box_met = "output/images/10_wr_de_boxplot_met.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule pecd_overview:
+    input:
+        script = "pipeline/09_pecd_overview.py",
+        data   = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+    output:
+        notebook      = "book/notebooks/09_pecd_overview.ipynb",
+        img_tseries   = "output/images/09_pecd_timeseries.png",
+        img_seasonal  = "output/images/09_pecd_seasonal.png",
+        img_countries = "output/images/09_pecd_country_comparison.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
 nbformat.write(nb, '{output.notebook}')
 "
         """
@@ -231,6 +407,7 @@ import nbformat
 nb = nbformat.read('{output.notebook}', as_version=4)
 nb.cells = [c for c in nb.cells
             if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
 nbformat.write(nb, '{output.notebook}')
 "
         """

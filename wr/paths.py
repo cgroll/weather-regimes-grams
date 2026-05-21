@@ -136,6 +136,20 @@ class ProjPaths:
         return self.grams_example_data_path / "CLIM_Z@500_year_1979-2019.nc"
 
     # ------------------------------------------------------------------ #
+    # WeatherBench2 data                                                   #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def wb_path(self) -> Path:
+        """Root directory for WeatherBench2 downloads."""
+        return self.downloads_path / "wb"
+
+    @property
+    def wb_z500_climatology(self) -> Path:
+        """WeatherBench2 ERA5 Z500 daily climatology (1979-2019, 12 UTC, 1.5° Euro-Atlantic)."""
+        return self.wb_path / "z500_climatology.zarr"
+
+    # ------------------------------------------------------------------ #
     # ERA5 data                                                            #
     # ------------------------------------------------------------------ #
 
@@ -143,6 +157,11 @@ class ProjPaths:
     def era5_path(self) -> Path:
         """Root directory for downloaded ERA5 fields."""
         return self.downloads_path / "era5"
+
+    @property
+    def era5_z500_daily_zarr(self) -> Path:
+        """Daily 12 UTC Z500 for 2024-2025, 1.5° Euro-Atlantic, from ARCO ERA5."""
+        return self.era5_path / "z500_euro_atlantic_2024_2025.zarr"
 
     def era5_z500_nc(self, start: str, end: str) -> Path:
         """NetCDF file for ERA5 Z0500 covering a given analysis period.

@@ -13,7 +13,7 @@
 #
 # For each of the 7 weather regimes we find the date that achieved the highest
 # regime index (IWR) value in the full record.  We then search the archive for
-# the 9 most similar states — measured by Euclidean distance in the
+# the 50 most similar states — measured by Mahalanobis distance in the
 # 7-dimensional WRI vector space — subject to the constraint that every analog
 # must originate from a **different lifecycle** than the query date and all
 # previously selected analogs.  This prevents redundant picks of temporally
@@ -23,7 +23,7 @@
 #
 # 1. **Jitter boxplot** — initial distances of the 50 analogs to the query state,
 #    one group per regime.
-# 2. **30-day divergence** — how Euclidean distance between each analog pair
+# 2. **30-day divergence** — how Mahalanobis distance between each analog pair
 #    evolves when both trajectories are propagated forward in parallel.
 # 3. **Global pairwise distance histogram** — distribution of all pairwise
 #    WRI distances (subsampled) as a reference background.
@@ -49,6 +49,13 @@ lc_attr = pd.read_csv(paths.lc_attribution_csv, parse_dates=["datetime"], index_
 
 WRI_ARR = wri[WR_NAMES].values   # (N, 7) — raw array for fast distance computation
 N       = len(wri)
+
+# Mahalanobis distance uses the inverse of the full-record covariance matrix.
+# This accounts for both the different variances of the 7 regime indices and
+# the correlations between them, giving equal statistical weight to each
+# independent direction in WRI space.
+COV     = np.cov(WRI_ARR.T)      # (7, 7) sample covariance
+COV_INV = np.linalg.inv(COV)     # (7, 7) precision matrix
 
 COLORS = {r["name"]: r["color"] for r in REGIMES}
 
@@ -92,7 +99,7 @@ def lifecycle_ids(ts: pd.Timestamp) -> frozenset:
 # %% [markdown]
 # ## Analog selection
 #
-# For a given query timestamp, we rank all other timesteps by Euclidean distance
+# For a given query timestamp, we rank all other timesteps by Mahalanobis distance
 # in WRI space, then greedily accept candidates whose lifecycle set does not
 # overlap with any already-selected lifecycle (including the query's).
 
@@ -105,7 +112,8 @@ def find_analogs(
     """Return (analog_timestamps, initial_distances) of length n_analogs."""
     q_idx   = wri.index.get_loc(query_ts)
     q_vec   = WRI_ARR[q_idx]
-    dists   = np.sqrt(((WRI_ARR - q_vec) ** 2).sum(axis=1))
+    diff    = WRI_ARR - q_vec                                        # (N, 7)
+    dists   = np.sqrt(np.einsum('ij,jk,ik->i', diff, COV_INV, diff))
     order   = np.argsort(dists)
 
     # Latest index that still leaves min_future_days of data
@@ -158,7 +166,7 @@ for regime in WR_NAMES:
 # %% [markdown]
 # ## 30-day divergence trajectories
 #
-# For each analog pair `(query, analog_i)`, compute the Euclidean distance at
+# For each analog pair `(query, analog_i)`, compute the Mahalanobis distance at
 # daily intervals when both time series are shifted forward in lockstep:
 # `dist(WRI[query + Δt], WRI[analog_i + Δt])` for Δt = 0, 1, …, 30 days.
 
@@ -181,7 +189,8 @@ for regime, res in analog_results.items():
             if a_future not in wri.index:
                 continue
             a_vec      = wri.loc[a_future, WR_NAMES].values
-            traj[k, j] = np.sqrt(np.sum((q_vec - a_vec) ** 2))
+            d          = q_vec - a_vec
+            traj[k, j] = np.sqrt(d @ COV_INV @ d)
 
     res["traj_dists"] = traj   # shape (31, 9)
 
@@ -227,7 +236,7 @@ ax.set_xticklabels(
     [f"{r}\n{analog_results[r]['query_ts'].strftime('%Y-%m-%d')}" for r in WR_NAMES],
     fontsize=11,
 )
-ax.set_ylabel("Euclidean distance in WRI space", fontsize=12)
+ax.set_ylabel("Mahalanobis distance in WRI space", fontsize=12)
 ax.set_title(
     f"Initial WRI distance: {N_ANALOGS} analogs per regime (query = max-IWR date)",
     fontsize=13,
@@ -240,7 +249,7 @@ plt.show()
 # %% [markdown]
 # ```{figure} ../../output/images/07_analog_jitter.png
 # :name: fig-07-analog-jitter
-# Euclidean distance in 7-dimensional WRI space between each regime's peak-IWR
+# Mahalanobis distance in 7-dimensional WRI space between each regime's peak-IWR
 # date and its 50 closest analogs from independent lifecycles.  Boxes span the
 # interquartile range; individual points are shown with horizontal jitter.
 # ```
@@ -278,7 +287,7 @@ for i, regime in enumerate(WR_NAMES):
         fontsize=11,
     )
     ax.set_xlabel("Days forward", fontsize=10)
-    ax.set_ylabel("Euclidean distance", fontsize=10)
+    ax.set_ylabel("Mahalanobis distance", fontsize=10)
     ax.tick_params(labelsize=9)
     ax.set_xlim(0, HORIZON_DAYS)
     ax.set_ylim(bottom=0)
@@ -297,7 +306,7 @@ plt.show()
 # %% [markdown]
 # ```{figure} ../../output/images/07_analog_divergence.png
 # :name: fig-07-analog-divergence
-# Euclidean distance between each regime's peak-IWR state and its 50 analogs,
+# Mahalanobis distance between each regime's peak-IWR state and its 50 analogs,
 # tracked day-by-day for 30 days.  Both the query trajectory and each analog
 # trajectory are advanced forward in lockstep.  Thin lines = individual analogs;
 # thick line = median.
@@ -306,17 +315,17 @@ plt.show()
 # %% [markdown]
 # ## Figure 3 — Global pairwise distance distribution
 #
-# We subsample the full time series and compute all pairwise Euclidean distances
+# We subsample the full time series and compute all pairwise Mahalanobis distances
 # as a reference background for the regime-specific distributions below.
 
 # %%
 SUBSAMPLE_N = 5000
 idx_sample  = RNG.choice(N, size=SUBSAMPLE_N, replace=False)
-all_dists   = pdist(WRI_ARR[np.sort(idx_sample)])
+all_dists   = pdist(WRI_ARR[np.sort(idx_sample)], metric='mahalanobis', VI=COV_INV)
 
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.hist(all_dists, bins=80, color="steelblue", alpha=0.8, edgecolor="none", density=True)
-ax.set_xlabel("Euclidean distance in WRI space", fontsize=12)
+ax.set_xlabel("Mahalanobis distance in WRI space", fontsize=12)
 ax.set_ylabel("Density", fontsize=12)
 ax.set_title(
     f"All pairwise WRI distances  (random subsample n={SUBSAMPLE_N:,})",
@@ -330,7 +339,7 @@ plt.show()
 # %% [markdown]
 # ```{figure} ../../output/images/07_pairwise_dist.png
 # :name: fig-07-pairwise-dist
-# Distribution of all pairwise Euclidean distances in the 7-dimensional WRI
+# Distribution of all pairwise Mahalanobis distances in the 7-dimensional WRI
 # vector space, based on a random subsample of 5,000 timesteps.
 # ```
 
@@ -369,7 +378,7 @@ for i, regime_idx in enumerate(range(8)):   # 0 = no regime, 1-7 = named regimes
         k        = min(REGIME_SUBSAMPLE, n_in)
         sample   = RNG.choice(n_in, size=k, replace=False)
         sub_arr  = wri.loc[ts_in[sample], WR_NAMES].values
-        r_dists  = pdist(sub_arr)
+        r_dists  = pdist(sub_arr, metric='mahalanobis', VI=COV_INV)
         ax.hist(
             r_dists, bins=bins, color=color, alpha=0.7,
             edgecolor="none", density=True, label=f"{regime_name} (n={n_in:,})",
@@ -377,7 +386,7 @@ for i, regime_idx in enumerate(range(8)):   # 0 = no regime, 1-7 = named regimes
 
     long_name = BY_INDEX[regime_idx]["long_name"]
     ax.set_title(f"{regime_name} — {long_name}", fontsize=10)
-    ax.set_xlabel("Euclidean distance", fontsize=9)
+    ax.set_xlabel("Mahalanobis distance", fontsize=9)
     ax.set_ylabel("Density", fontsize=9)
     ax.tick_params(labelsize=8)
     ax.legend(fontsize=8)

@@ -19,6 +19,12 @@ project:
         - file: notebooks/06_era5_wr_projection.ipynb
         - file: notebooks/07_wr_analogs.ipynb
         - file: notebooks/08_lifecycle_inspection.ipynb
+        - file: notebooks/09_pecd_overview.ipynb
+        - file: notebooks/10_wr_pecd_germany.ipynb
+        - file: notebooks/11_wr_pecd_maps.ipynb
+        - file: notebooks/12_low_cf_events.ipynb
+        - file: notebooks/13_low_wind_regimes.ipynb
+        - file: notebooks/14_pecd_de_climatology.ipynb
 site:
   options:
     folders: true
