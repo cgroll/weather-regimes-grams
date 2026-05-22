@@ -18,6 +18,7 @@
 # ---------------------------------------------------------------------------
 
 ANALYSIS_NOTEBOOKS = [
+    "book/notebooks/21_z500_eof.ipynb",
     "book/notebooks/04_wr_timeseries.ipynb",
     "book/notebooks/05_compute_projection.ipynb",
     "book/notebooks/06_era5_wr_projection.ipynb",
@@ -128,6 +129,30 @@ rule z500_anomaly_gif:
 # ---------------------------------------------------------------------------
 # Reference material
 # ---------------------------------------------------------------------------
+
+rule z500_eof:
+    input:
+        script = "pipeline/21_z500_eof.py",
+        era5   = "data/downloads/era5/z500_euro_atlantic.zarr",
+        clim   = "data/downloads/wb/z500_climatology.zarr",
+    output:
+        notebook = "book/notebooks/21_z500_eof.ipynb",
+        img      = "output/images/21_z500_eof_maps.png",
+        pcs      = "data/processed/z500_pcs.parquet",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
 
 rule z500_cf_correlation:
     input:

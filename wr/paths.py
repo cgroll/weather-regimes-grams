@@ -207,6 +207,11 @@ class ProjPaths:
         """No-regime periods (onset/decay/duration/transition)."""
         return self.processed_data_path / "lc_no_regime.csv"
 
+    @property
+    def z500_pcs(self) -> Path:
+        """Daily PC scores for the leading 20 Z500 EOFs (area-weighted PCA)."""
+        return self.processed_data_path / "z500_pcs.parquet"
+
     # ------------------------------------------------------------------ #
     # Helpers                                                              #
     # ------------------------------------------------------------------ #
