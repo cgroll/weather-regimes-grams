@@ -25,6 +25,7 @@ project:
         - file: notebooks/12_low_cf_events.ipynb
         - file: notebooks/13_low_wind_regimes.ipynb
         - file: notebooks/14_pecd_de_climatology.ipynb
+        - file: notebooks/20_z500_cf_correlation.ipynb
 site:
   options:
     folders: true

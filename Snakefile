@@ -29,6 +29,7 @@ ANALYSIS_NOTEBOOKS = [
     "book/notebooks/12_low_cf_events.ipynb",
     "book/notebooks/13_low_wind_regimes.ipynb",
     "book/notebooks/14_pecd_de_climatology.ipynb",
+    "book/notebooks/20_z500_cf_correlation.ipynb",
 ]
 
 PROCESSED_DATA = [
@@ -38,17 +39,19 @@ PROCESSED_DATA = [
     "data/processed/lc_no_regime.csv",
 ]
 
-ERA5_YEARS = [2019, 2020, 2021]        # expand to list(range(1960, 2022)) for the full dataset
+ERA5_YEARS = list(range(1960, 2022))   # 1960–2021: full WeatherBench2 ERA5 coverage
 
 DOWNLOADS = [
     "data/downloads/wb/z500_climatology.zarr",
     "data/downloads/era5/z500_euro_atlantic.zarr",
 ]
 
+GIF_YEARS = [2020]
+
 GENERATED_IMAGES = [
     "output/images/18_z500_climatology.gif",
-] + expand("output/images/19_z500_{year}.gif", year=ERA5_YEARS) \
-  + expand("output/images/19_z500_anomaly_{year}.gif", year=ERA5_YEARS)
+] + expand("output/images/19_z500_{year}.gif", year=GIF_YEARS) \
+  + expand("output/images/19_z500_anomaly_{year}.gif", year=GIF_YEARS)
 
 # ---------------------------------------------------------------------------
 # Default target
@@ -125,6 +128,35 @@ rule z500_anomaly_gif:
 # ---------------------------------------------------------------------------
 # Reference material
 # ---------------------------------------------------------------------------
+
+rule z500_cf_correlation:
+    input:
+        script = "pipeline/20_z500_cf_correlation.py",
+        era5   = "data/downloads/era5/z500_euro_atlantic.zarr",
+        clim   = "data/downloads/wb/z500_climatology.zarr",
+        pecd   = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+    output:
+        notebook  = "book/notebooks/20_z500_cf_correlation.ipynb",
+        img_simul = "output/images/20_z500_cf_correlation.png",
+        img_combos = expand(
+            "output/images/20_z500_cf_corr_w{w}d_lag{lag}d.png",
+            w=["1", "2", "5"],
+            lag=["00", "05", "15"],
+        )[1:],
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
 
 rule convert_example_notebook:
     input:
