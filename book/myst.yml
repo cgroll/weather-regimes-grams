@@ -27,6 +27,7 @@ project:
         - file: notebooks/14_pecd_de_climatology.ipynb
         - file: notebooks/20_z500_cf_correlation.ipynb
         - file: notebooks/21_z500_eof.ipynb
+        - file: notebooks/23_cf_model_results.ipynb
 site:
   options:
     folders: true

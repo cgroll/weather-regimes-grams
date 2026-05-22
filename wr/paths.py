@@ -212,6 +212,21 @@ class ProjPaths:
         """Daily PC scores for the leading 20 Z500 EOFs (area-weighted PCA)."""
         return self.processed_data_path / "z500_pcs.parquet"
 
+    @property
+    def cf_model_scores(self) -> Path:
+        """R², RMSE, Pearson r for all CF prediction model combinations."""
+        return self.processed_data_path / "cf_model_scores.parquet"
+
+    @property
+    def cf_model_predictions(self) -> Path:
+        """Test-set predicted vs actual CF anomaly (long format)."""
+        return self.processed_data_path / "cf_model_predictions.parquet"
+
+    @property
+    def cf_model_coefs(self) -> Path:
+        """Ridge coefficients and XGBoost gain importances per PC."""
+        return self.processed_data_path / "cf_model_coefs.parquet"
+
     # ------------------------------------------------------------------ #
     # Helpers                                                              #
     # ------------------------------------------------------------------ #

@@ -19,6 +19,7 @@
 
 ANALYSIS_NOTEBOOKS = [
     "book/notebooks/21_z500_eof.ipynb",
+    "book/notebooks/23_cf_model_results.ipynb",
     "book/notebooks/04_wr_timeseries.ipynb",
     "book/notebooks/05_compute_projection.ipynb",
     "book/notebooks/06_era5_wr_projection.ipynb",
@@ -139,6 +140,44 @@ rule z500_eof:
         notebook = "book/notebooks/21_z500_eof.ipynb",
         img      = "output/images/21_z500_eof_maps.png",
         pcs      = "data/processed/z500_pcs.parquet",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule fit_cf_models:
+    input:
+        script = "pipeline/22_fit_cf_models.py",
+        pcs    = "data/processed/z500_pcs.parquet",
+        pecd   = "/home/chris/research/world-of-energy/data/processed/pecd/pecd_regions.parquet",
+    output:
+        scores  = "data/processed/cf_model_scores.parquet",
+        preds   = "data/processed/cf_model_predictions.parquet",
+        coefs   = "data/processed/cf_model_coefs.parquet",
+    shell:
+        "uv run python pipeline/22_fit_cf_models.py"
+
+rule cf_model_results:
+    input:
+        script  = "pipeline/23_cf_model_results.py",
+        scores  = "data/processed/cf_model_scores.parquet",
+        preds   = "data/processed/cf_model_predictions.parquet",
+        coefs   = "data/processed/cf_model_coefs.parquet",
+    output:
+        notebook    = "book/notebooks/23_cf_model_results.ipynb",
+        img_r2      = "output/images/23_cf_model_r2.png",
+        img_imp     = "output/images/23_cf_model_importance.png",
+        img_scatter = "output/images/23_cf_model_scatter.png",
     shell:
         """
         MPLBACKEND=Agg uv run jupytext --to notebook --execute \
