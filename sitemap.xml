@@ -19,4 +19,31 @@
   <url>
     <loc>http://localhost:3000/notebooks/lifecycle-inspection</loc>
   </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/pecd-overview</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/wr-pecd-germany</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/wr-pecd-maps</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/low-cf-events</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/low-wind-regimes</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/pecd-de-climatology</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/z500-cf-correlation</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/z500-eof</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/cf-model-results</loc>
+  </url>
 </urlset>
