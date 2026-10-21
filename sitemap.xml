@@ -14,6 +14,15 @@
     <loc>http://localhost:3000/notebooks/era5-wr-projection</loc>
   </url>
   <url>
+    <loc>http://localhost:3000/notebooks/era5-wr-projection-seasonal-clim</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/golden-field-report</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/notebooks/iwr-timeseries-recomputed</loc>
+  </url>
+  <url>
     <loc>http://localhost:3000/notebooks/wr-analogs</loc>
   </url>
   <url>
