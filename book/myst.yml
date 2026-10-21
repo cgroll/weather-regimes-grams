@@ -17,6 +17,9 @@ project:
         - file: notebooks/04_wr_timeseries.ipynb
         - file: notebooks/05_compute_projection.ipynb
         - file: notebooks/06_era5_wr_projection.ipynb
+        - file: notebooks/25_era5_wr_projection_seasonal_clim.ipynb
+        - file: notebooks/27_golden_field_report.ipynb
+        - file: notebooks/28_iwr_timeseries_recomputed.ipynb
         - file: notebooks/07_wr_analogs.ipynb
         - file: notebooks/08_lifecycle_inspection.ipynb
         - file: notebooks/09_pecd_overview.ipynb

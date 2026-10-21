@@ -23,6 +23,9 @@ ANALYSIS_NOTEBOOKS = [
     "book/notebooks/04_wr_timeseries.ipynb",
     "book/notebooks/05_compute_projection.ipynb",
     "book/notebooks/06_era5_wr_projection.ipynb",
+    "book/notebooks/25_era5_wr_projection_seasonal_clim.ipynb",
+    "book/notebooks/27_golden_field_report.ipynb",
+    "book/notebooks/28_iwr_timeseries_recomputed.ipynb",
     "book/notebooks/07_wr_analogs.ipynb",
     "book/notebooks/08_lifecycle_inspection.ipynb",
     "book/notebooks/09_pecd_overview.ipynb",
@@ -84,6 +87,18 @@ rule download_wb_z500_climatology:
         directory("data/downloads/wb/z500_climatology.zarr"),
     shell:
         "uv run python pipeline/15_download_wb_z500_climatology.py"
+
+rule download_wb_z500_climatology_6h:
+    output:
+        directory("data/downloads/wb/z500_climatology_6h_0p5deg.zarr"),
+    shell:
+        "uv run python pipeline/24_download_wb_z500_climatology_6h.py"
+
+rule download_era5_z500_golden:
+    output:
+        "data/downloads/era5/z0500_20250601_20250601.nc",
+    shell:
+        "uv run python pipeline/26_download_era5_z500_golden.py"
 
 rule download_era5_z500_year:
     output:
@@ -277,6 +292,96 @@ rule era5_wr_projection:
     output:
         notebook = "book/notebooks/06_era5_wr_projection.ipynb",
         img      = "output/images/06_era5_iwr_comparison.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule era5_wr_projection_seasonal_clim:
+    input:
+        script   = "pipeline/25_era5_wr_projection_seasonal_clim.py",
+        z500     = "data/downloads/era5/z0500_20241101_20250331.nc",
+        clim     = "data/downloads/wr_data_package_V1.0/example_data/CLIM_Z@500_year_1979-2019.nc",
+        wb_clim  = "data/downloads/wb/z500_climatology_6h_0p5deg.zarr",
+        eofs     = "data/downloads/wr_data_package_V1.0/wr_data/EOFs_WRs.nc",
+        patterns = "data/downloads/wr_data_package_V1.0/wr_data/Normed_Z0500-patterns_EOFdomain.nc",
+        wri_csv  = "data/processed/wri_projections.csv",
+    output:
+        notebook   = "book/notebooks/25_era5_wr_projection_seasonal_clim.ipynb",
+        img        = "output/images/25_era5_iwr_clim_variants.png",
+        img_errors = "output/images/25_era5_iwr_clim_errors.png",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule golden_field_report:
+    input:
+        script   = "pipeline/27_golden_field_report.py",
+        golden   = "data/downloads/wr_data_package_V1.0/example_data/Z0500_20250601_00.nc",
+        z500     = "data/downloads/era5/z0500_20250601_20250601.nc",
+        clim     = "data/downloads/wr_data_package_V1.0/example_data/CLIM_Z@500_year_1979-2019.nc",
+        wb_clim  = "data/downloads/wb/z500_climatology_6h_0p5deg.zarr",
+        eofs     = "data/downloads/wr_data_package_V1.0/wr_data/EOFs_WRs.nc",
+        patterns = "data/downloads/wr_data_package_V1.0/wr_data/Normed_Z0500-patterns_EOFdomain.nc",
+        wri_csv  = "data/processed/wri_projections.csv",
+    output:
+        notebook    = "book/notebooks/27_golden_field_report.ipynb",
+        img_maps    = "output/images/27_golden_field_maps.png",
+        img_scatter = "output/images/27_golden_field_scatter.png",
+        img_iwr     = "output/images/27_golden_field_iwr.png",
+        pdf         = "output/reports/27_golden_field_report.pdf",
+    shell:
+        """
+        MPLBACKEND=Agg uv run jupytext --to notebook --execute \
+            --set-kernel python3 \
+            --output {output.notebook} {input.script} && \
+        uv run python -c "
+import nbformat
+nb = nbformat.read('{output.notebook}', as_version=4)
+nb.cells = [c for c in nb.cells
+            if not (c.cell_type == 'raw' and 'jupytext' in c.source)]
+nb.metadata.pop('jupytext', None)
+nbformat.write(nb, '{output.notebook}')
+"
+        """
+
+rule iwr_timeseries_recomputed:
+    input:
+        script   = "pipeline/28_iwr_timeseries_recomputed.py",
+        era5     = "data/downloads/era5/z500_euro_atlantic.zarr",
+        clim     = "data/downloads/wb/z500_climatology.zarr",
+        eofs     = "data/downloads/wr_data_package_V1.0/wr_data/EOFs_WRs.nc",
+        patterns = "data/downloads/wr_data_package_V1.0/wr_data/Normed_Z0500-patterns_EOFdomain.nc",
+        wri_csv  = "data/processed/wri_projections.csv",
+    output:
+        notebook    = "book/notebooks/28_iwr_timeseries_recomputed.ipynb",
+        img_ts      = "output/images/28_iwr_recomputed_timeseries.png",
+        img_zoom    = "output/images/28_iwr_recomputed_zoom.png",
+        img_scatter = "output/images/28_iwr_recomputed_scatter.png",
+        img_doy     = "output/images/28_iwr_recomputed_doy.png",
+        img_bias    = "output/images/28_iwr_bias_correction.png",
+        img_bias_zoom = "output/images/28_iwr_bias_corrected_zoom.png",
     shell:
         """
         MPLBACKEND=Agg uv run jupytext --to notebook --execute \

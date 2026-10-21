@@ -149,6 +149,11 @@ class ProjPaths:
         """WeatherBench2 ERA5 Z500 daily climatology (1979-2019, 12 UTC, 1.5° Euro-Atlantic)."""
         return self.wb_path / "z500_climatology.zarr"
 
+    @property
+    def wb_z500_climatology_6h(self) -> Path:
+        """WeatherBench2 ERA5 Z500 climatology (1990-2019, 6-hourly × day-of-year, 0.5° EOF domain)."""
+        return self.wb_path / "z500_climatology_6h_0p5deg.zarr"
+
     # ------------------------------------------------------------------ #
     # ERA5 data                                                            #
     # ------------------------------------------------------------------ #
