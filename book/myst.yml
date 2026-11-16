@@ -34,4 +34,4 @@ project:
 site:
   options:
     folders: true
-  template: book-theme
+  template: https://github.com/jupyter-book/myst-theme/releases/download/myst-to-react%401.4.1/book-theme.zip
